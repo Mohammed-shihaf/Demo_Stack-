@@ -1,0 +1,38 @@
+version: "3.8"
+
+services:
+  mongo:
+    image: mongo:8
+    container_name: ce-mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.15.3
+    container_name: ce-elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ports:
+      - "9200:9200"
+    volumes:
+      - es-data:/usr/share/elasticsearch/data
+
+  localstack:
+    image: localstack/localstack:3
+    container_name: ce-localstack
+    environment:
+      - SERVICES=sns,ses,sqs
+      - DEFAULT_REGION=us-east-1
+    ports:
+      - "4566:4566"
+    volumes:
+      - localstack-data:/var/lib/localstack
+
+volumes:
+  mongo-data:
+  es-data:
+  localstack-data:

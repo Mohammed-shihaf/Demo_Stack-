@@ -1,0 +1,33 @@
+syntax = "proto3";
+
+package ceplatform;
+
+// RecordService is hosted by backend-service-a (the gRPC SERVER).
+// backend-service-b is the gRPC CLIENT: it calls GetRecord for point
+// lookups and subscribes to WatchRecords to learn about new records
+// as they are created via service-a's REST API, so it can index them
+// into Elasticsearch, publish an SNS event, and send an SES email.
+service RecordService {
+  // Unary call: fetch a single record by id.
+  rpc GetRecord (GetRecordRequest) returns (Record);
+
+  // Server-streaming call: service-b subscribes once at startup and
+  // receives a Record message every time service-a creates a new one.
+  rpc WatchRecords (WatchRecordsRequest) returns (stream Record);
+}
+
+message GetRecordRequest {
+  string id = 1;
+}
+
+message WatchRecordsRequest {
+  // Reserved for a resume cursor; unused by the minimal reference impl.
+  string since = 1;
+}
+
+message Record {
+  string id = 1;
+  string title = 2;
+  string description = 3;
+  string createdAt = 4;
+}

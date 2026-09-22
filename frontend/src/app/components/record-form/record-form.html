@@ -1,0 +1,19 @@
+<section class="record-form">
+  <h2>Create Record</h2>
+  <form (ngSubmit)="submit()">
+    <label>
+      Title
+      <input name="title" [(ngModel)]="title" required />
+    </label>
+    <label>
+      Description
+      <input name="description" [(ngModel)]="description" />
+    </label>
+    <button type="submit" [disabled]="submitting()">
+      {{ submitting() ? 'Saving...' : 'Create' }}
+    </button>
+    @if (error()) {
+      <p class="error">{{ error() }}</p>
+    }
+  </form>
+</section>
