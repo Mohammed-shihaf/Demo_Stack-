@@ -1,0 +1,10 @@
+node_modules/
+dist/
+.angular/
+*.log
+.env
+.DS_Store
+coverage/
+.nyc_output/
+reports/
+.stryker-tmp/

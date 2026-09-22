@@ -1,0 +1,17 @@
+# Gitleaks Configuration for CE-Platform-Stack (CE-001)
+title = "Gitleaks Rule Profile for CE-001"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Global allowlist for verified test fixture data"
+paths = [
+  '''test/.*''',
+  '''tests/.*''',
+  '''src/fixtures/.*'''
+]
+regexes = [
+  '''stu-[0-9]+''',
+  '''log-[0-9]+'''
+]

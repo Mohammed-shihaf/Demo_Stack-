@@ -1,0 +1,15 @@
+<section class="record-list">
+  <h2>Records</h2>
+  <button type="button" (click)="recordService.refresh()">Refresh</button>
+  <ul>
+    @for (record of recordService.records(); track record.id) {
+      <li>
+        <strong>{{ record.title }}</strong>
+        <span> - {{ record.description }}</span>
+        <small> ({{ record.createdAt | date: 'short' }})</small>
+      </li>
+    } @empty {
+      <li>No records yet.</li>
+    }
+  </ul>
+</section>
