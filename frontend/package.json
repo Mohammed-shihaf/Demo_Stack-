@@ -1,0 +1,71 @@
+{
+  "name": "frontend",
+  "version": "0.0.0",
+  "scripts": {
+    "ng": "ng",
+    "start": "ng serve",
+    "build": "ng build",
+    "watch": "ng build --watch --configuration development",
+    "test": "ng test",
+    "lint": "eslint .",
+    "lint:biome": "biome check src/",
+    "mutation": "stryker run"
+  },
+  "prettier": {
+    "printWidth": 100,
+    "singleQuote": true,
+    "overrides": [
+      {
+        "files": "*.html",
+        "options": {
+          "parser": "angular"
+        }
+      }
+    ]
+  },
+  "private": true,
+  "dependencies": {
+    "@angular/common": "^20.3.0",
+    "@angular/compiler": "^20.3.0",
+    "@angular/core": "^20.3.0",
+    "@angular/forms": "^20.3.0",
+    "@angular/platform-browser": "^20.3.0",
+    "@angular/router": "^20.3.0",
+    "rxjs": "~7.8.0",
+    "tslib": "^2.3.0",
+    "zone.js": "~0.15.0"
+  },
+  "devDependencies": {
+    "@angular/build": "^20.3.34",
+    "@angular/cli": "^20.3.34",
+    "@angular/compiler-cli": "^20.3.0",
+    "@biomejs/biome": "2.5.9",
+    "@eslint/js": "^9.20.0",
+    "@nodesecure/cli": "^3.1.0",
+    "@sigstore/cli": "^0.10.3",
+    "@stryker-mutator/core": "10.0.0",
+    "@stryker-mutator/karma-runner": "10.0.0",
+    "@stryker-mutator/typescript-checker": "10.0.0",
+    "@tracegraph/cli": "^0.3.1",
+    "@tracegraph/trace-js": "^0.3.1",
+    "@types/jasmine": "~5.1.0",
+    "angular-eslint": "20.3.0",
+    "crap4ts": "^1.0.1",
+    "cve-lite-cli": "^1.29.0",
+    "eslint": "^8.57.1",
+    "eslint-plugin-security": "^4.0.1",
+    "eslint-plugin-sonarjs": "^1.0.4",
+    "jasmine-core": "~5.9.0",
+    "karma": "~6.4.0",
+    "karma-chrome-launcher": "~3.2.0",
+    "karma-coverage": "~2.2.0",
+    "karma-jasmine": "~5.1.0",
+    "karma-jasmine-html-reporter": "~2.1.0",
+    "license-checker-rseidelsohn": "^5.0.1",
+    "mewt": "^2.0.2",
+    "oxc-coverage-instrument": "^0.12.0",
+    "ts-unused-exports": "^11.0.1",
+    "typescript": "~5.9.2",
+    "typescript-eslint": "^8.0.0"
+  }
+}

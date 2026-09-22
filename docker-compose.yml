@@ -1,0 +1,57 @@
+version: "3.8"
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: demo-python-backend
+    ports:
+      - "8000:8000"
+      - "50051:50051"
+    environment:
+      - PORT=8000
+      - GRPC_PORT=50051
+      - MONGO_URI=mongodb://mongo:27017/demo_stack
+      - ELASTICSEARCH_NODE=http://elasticsearch:9200
+      - AWS_ENDPOINT=http://localstack:4566
+    depends_on:
+      - mongo
+      - elasticsearch
+      - localstack
+
+  mongo:
+    image: mongo:8
+    container_name: ce-mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.15.3
+    container_name: ce-elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ports:
+      - "9200:9200"
+    volumes:
+      - es-data:/usr/share/elasticsearch/data
+
+  localstack:
+    image: localstack/localstack:3
+    container_name: ce-localstack
+    environment:
+      - SERVICES=sns,ses,sqs
+      - DEFAULT_REGION=us-east-1
+    ports:
+      - "4566:4566"
+    volumes:
+      - localstack-data:/var/lib/localstack
+
+volumes:
+  mongo-data:
+  es-data:
+  localstack-data:
