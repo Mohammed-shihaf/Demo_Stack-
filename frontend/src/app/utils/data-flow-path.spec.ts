@@ -2,9 +2,9 @@ import { describe, it, expect } from 'vitest';
 import {
   evaluateMultiDefinitionFlow,
   executeCrossFunctionPipeline,
-  validateStage,
-  transformStage,
-  aggregateStage,
+  evaluateLoopPaths,
+  executeExceptionHandlingPath,
+  routeMultiFunctionPath,
   DataFlowError,
 } from './data-flow-path';
 
@@ -83,6 +83,105 @@ describe('data-flow-path utility (frontend)', () => {
       expect(err.name).toBe('DataFlowError');
       expect(err.message).toBe('Validation failure');
       expect(err.details['step']).toBe(1);
+    });
+  });
+
+  describe('evaluateLoopPaths', () => {
+    it('executes zero-iteration loop path', () => {
+      const res = evaluateLoopPaths([]);
+      expect(res.iterationCount).toBe(0);
+      expect(res.hasZeroIterations).toBe(true);
+      expect(res.hasSingleIteration).toBe(false);
+      expect(res.hasMultipleIterations).toBe(false);
+      expect(res.breakTriggered).toBe(false);
+    });
+
+    it('executes single-iteration loop path', () => {
+      const res = evaluateLoopPaths([77]);
+      expect(res.iterationCount).toBe(1);
+      expect(res.hasZeroIterations).toBe(false);
+      expect(res.hasSingleIteration).toBe(true);
+      expect(res.totalSum).toBe(77);
+    });
+
+    it('executes multi-iteration loop path', () => {
+      const res = evaluateLoopPaths([1, 2, 3, 4]);
+      expect(res.iterationCount).toBe(4);
+      expect(res.hasMultipleIterations).toBe(true);
+      expect(res.totalSum).toBe(10);
+    });
+
+    it('triggers early break on maxLimit', () => {
+      const res = evaluateLoopPaths([10, 20, 30], { maxLimit: 1 });
+      expect(res.breakTriggered).toBe(true);
+      expect(res.processedCount).toBe(1);
+      expect(res.totalSum).toBe(10);
+    });
+
+    it('skips items on continue conditions', () => {
+      const res = evaluateLoopPaths([10, null, -5, undefined, 20], { filterNegatives: true });
+      expect(res.skippedCount).toBe(3);
+      expect(res.processedCount).toBe(2);
+      expect(res.totalSum).toBe(30);
+    });
+  });
+
+  describe('executeExceptionHandlingPath', () => {
+    it('executes success path and verifies finally block', () => {
+      const res = executeExceptionHandlingPath({ value: 15 });
+      expect(res.executionStatus).toBe('SUCCESS');
+      expect(res.resultValue).toBe(30);
+      expect(res.finalCleanupExecuted).toBe(true);
+    });
+
+    it('executes recovered fallback path on invalid input', () => {
+      const res = executeExceptionHandlingPath(null, { fallbackValue: 0 });
+      expect(res.executionStatus).toBe('RECOVERED');
+      expect(res.resultValue).toBe(0);
+      expect(res.caughtErrorMessage).toContain('numerical value is required');
+      expect(res.finalCleanupExecuted).toBe(true);
+    });
+
+    it('executes recovered fallback path on negative value', () => {
+      const res = executeExceptionHandlingPath({ value: -1 }, { fallbackValue: 5 });
+      expect(res.executionStatus).toBe('RECOVERED');
+      expect(res.resultValue).toBe(5);
+      expect(res.finalCleanupExecuted).toBe(true);
+    });
+
+    it('re-throws when rethrowFatal is enabled', () => {
+      expect(() => {
+        executeExceptionHandlingPath(null, { rethrowFatal: true });
+      }).toThrowError(DataFlowError);
+    });
+  });
+
+  describe('routeMultiFunctionPath', () => {
+    it('routes through EXPRESS path', () => {
+      const res = routeMultiFunctionPath({ value: 10 }, 'EXPRESS');
+      expect(res.executedPath).toBe('EXPRESS');
+      expect(res.computedScore).toBe(15);
+    });
+
+    it('routes through DETAILED path (high bonus vs regular bonus)', () => {
+      const high = routeMultiFunctionPath({ value: 60 }, 'DETAILED');
+      expect(high.executedPath).toBe('DETAILED');
+      expect(high.computedScore).toBe(145);
+
+      const reg = routeMultiFunctionPath({ value: 10 }, 'DETAILED');
+      expect(reg.computedScore).toBe(25);
+    });
+
+    it('routes through RECOVERY path', () => {
+      const res = routeMultiFunctionPath(null, 'RECOVERY');
+      expect(res.executedPath).toBe('RECOVERY');
+      expect(res.isFallbackApplied).toBe(true);
+    });
+
+    it('routes through DEFAULT path', () => {
+      const res = routeMultiFunctionPath({ value: 22 }, 'UNKNOWN');
+      expect(res.executedPath).toBe('DEFAULT');
+      expect(res.computedScore).toBe(22);
     });
   });
 });

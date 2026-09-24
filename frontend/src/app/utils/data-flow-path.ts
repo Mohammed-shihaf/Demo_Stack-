@@ -187,3 +187,183 @@ export function evaluateMultiDefinitionFlow(
     guardedDiagnostic,
   };
 }
+
+export interface LoopPathOptions {
+  maxLimit?: number;
+  filterNegatives?: boolean;
+}
+
+export interface LoopPathResult {
+  totalInputItems: number;
+  iterationCount: number;
+  processedCount: number;
+  skippedCount: number;
+  breakTriggered: boolean;
+  totalSum: number;
+  processedItems: number[];
+  hasZeroIterations: boolean;
+  hasSingleIteration: boolean;
+  hasMultipleIterations: boolean;
+}
+
+export interface ExceptionPathOptions {
+  fallbackValue?: number;
+  rethrowFatal?: boolean;
+  forceError?: boolean;
+}
+
+export interface ExceptionPathResult {
+  executionStatus: 'SUCCESS' | 'RECOVERED' | 'PENDING';
+  resultValue: number | null;
+  caughtErrorMessage: string | null;
+  finalCleanupExecuted: boolean;
+}
+
+export interface MultiFunctionRouteResult {
+  executedPath: 'EXPRESS' | 'DETAILED' | 'RECOVERY' | 'DEFAULT';
+  priorityWeight: number;
+  computedScore: number;
+  isFallbackApplied?: boolean;
+}
+
+export function evaluateLoopPaths(items?: unknown[] | null, options: LoopPathOptions = {}): LoopPathResult {
+  const list = Array.isArray(items) ? items : [];
+  const maxLimit = typeof options.maxLimit === 'number' ? options.maxLimit : Infinity;
+  const filterNegatives = Boolean(options.filterNegatives);
+
+  let iterationCount = 0;
+  let breakTriggered = false;
+  let skippedCount = 0;
+  let totalSum = 0;
+  const processedItems: number[] = [];
+
+  for (let i = 0; i < list.length; i++) {
+    iterationCount++;
+
+    if (processedItems.length >= maxLimit) {
+      breakTriggered = true;
+      break;
+    }
+
+    const item = list[i];
+    if (item === null || item === undefined || (filterNegatives && typeof item === 'number' && item < 0)) {
+      skippedCount++;
+      continue;
+    }
+
+    const numVal = typeof item === 'number' ? item : (Number(item) || 0);
+    totalSum += numVal;
+    processedItems.push(numVal);
+  }
+
+  return {
+    totalInputItems: list.length,
+    iterationCount,
+    processedCount: processedItems.length,
+    skippedCount,
+    breakTriggered,
+    totalSum,
+    processedItems,
+    hasZeroIterations: iterationCount === 0,
+    hasSingleIteration: iterationCount === 1,
+    hasMultipleIterations: iterationCount > 1,
+  };
+}
+
+export function executeExceptionHandlingPath(
+  input?: { value?: number } | null,
+  options: ExceptionPathOptions = {}
+): ExceptionPathResult {
+  const { fallbackValue = 0, rethrowFatal = false, forceError = false } = options;
+  let finalCleanupExecuted = false;
+  let executionStatus: 'SUCCESS' | 'RECOVERED' | 'PENDING' = 'PENDING';
+  let resultValue: number | null = null;
+  let caughtErrorMessage: string | null = null;
+
+  try {
+    if (forceError || !input || typeof input.value !== 'number') {
+      throw new DataFlowError('Invalid payload: numerical value is required', {
+        received: input,
+      });
+    }
+
+    if (input.value < 0) {
+      throw new DataFlowError('Value out of bounds: negative value prohibited', {
+        receivedValue: input.value,
+      });
+    }
+
+    resultValue = input.value * 2;
+    executionStatus = 'SUCCESS';
+  } catch (err: unknown) {
+    caughtErrorMessage = err instanceof Error ? err.message : String(err);
+    if (rethrowFatal) {
+      throw err;
+    }
+    resultValue = fallbackValue;
+    executionStatus = 'RECOVERED';
+  } finally {
+    finalCleanupExecuted = true;
+  }
+
+  return {
+    executionStatus,
+    resultValue,
+    caughtErrorMessage,
+    finalCleanupExecuted,
+  };
+}
+
+function pathExpress(record?: DataFlowRecord | null): MultiFunctionRouteResult {
+  const val = record && typeof record.value === 'number' ? record.value : 0;
+  return {
+    executedPath: 'EXPRESS',
+    priorityWeight: 1.0,
+    computedScore: val * 1.5,
+  };
+}
+
+function pathDetailed(record?: DataFlowRecord | null): MultiFunctionRouteResult {
+  const val = record && typeof record.value === 'number' ? record.value : 0;
+  const bonus = val > 50 ? 25 : 5;
+  return {
+    executedPath: 'DETAILED',
+    priorityWeight: 2.0,
+    computedScore: val * 2.0 + bonus,
+  };
+}
+
+function pathRecovery(): MultiFunctionRouteResult {
+  return {
+    executedPath: 'RECOVERY',
+    priorityWeight: 0.5,
+    computedScore: 10,
+    isFallbackApplied: true,
+  };
+}
+
+function pathDefault(record?: DataFlowRecord | null): MultiFunctionRouteResult {
+  const val = record && typeof record.value === 'number' ? record.value : 0;
+  return {
+    executedPath: 'DEFAULT',
+    priorityWeight: 1.0,
+    computedScore: val,
+  };
+}
+
+export function routeMultiFunctionPath(
+  record?: DataFlowRecord | null,
+  strategy = 'DEFAULT'
+): MultiFunctionRouteResult {
+  const normalized = String(strategy).toUpperCase();
+
+  if (normalized === 'EXPRESS') {
+    return pathExpress(record);
+  } else if (normalized === 'DETAILED') {
+    return pathDetailed(record);
+  } else if (normalized === 'RECOVERY') {
+    return pathRecovery();
+  }
+
+  return pathDefault(record);
+}

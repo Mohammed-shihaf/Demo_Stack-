@@ -97,4 +97,113 @@ describe('DataFlowPathService Domain Tests', () => {
       assert.strictEqual(err.details.code, 'DF_01');
     });
   });
+
+  describe('Control Flow & Loop Path Detection Tests', () => {
+    it('executes zero-iteration loop path when collection is empty', () => {
+      const result = DataFlowPathService.evaluateLoopPaths([]);
+      assert.strictEqual(result.iterationCount, 0);
+      assert.strictEqual(result.processedCount, 0);
+      assert.strictEqual(result.hasZeroIterations, true);
+      assert.strictEqual(result.hasSingleIteration, false);
+      assert.strictEqual(result.hasMultipleIterations, false);
+      assert.strictEqual(result.breakTriggered, false);
+    });
+
+    it('executes exactly one iteration loop path', () => {
+      const result = DataFlowPathService.evaluateLoopPaths([42]);
+      assert.strictEqual(result.iterationCount, 1);
+      assert.strictEqual(result.processedCount, 1);
+      assert.strictEqual(result.hasZeroIterations, false);
+      assert.strictEqual(result.hasSingleIteration, true);
+      assert.strictEqual(result.totalSum, 42);
+    });
+
+    it('executes multi-iteration loop path with multiple items', () => {
+      const result = DataFlowPathService.evaluateLoopPaths([10, 20, 30]);
+      assert.strictEqual(result.iterationCount, 3);
+      assert.strictEqual(result.processedCount, 3);
+      assert.strictEqual(result.hasMultipleIterations, true);
+      assert.strictEqual(result.totalSum, 60);
+    });
+
+    it('exercises early break condition path when maxLimit reached', () => {
+      const result = DataFlowPathService.evaluateLoopPaths([10, 20, 30, 40], { maxLimit: 2 });
+      assert.strictEqual(result.processedCount, 2);
+      assert.strictEqual(result.breakTriggered, true);
+      assert.strictEqual(result.totalSum, 30); // 10 + 20
+    });
+
+    it('exercises continue condition path skipping null, undefined, and filtered negative items', () => {
+      const result = DataFlowPathService.evaluateLoopPaths([15, null, -10, undefined, 25], { filterNegatives: true });
+      assert.strictEqual(result.skippedCount, 3);
+      assert.strictEqual(result.processedCount, 2);
+      assert.strictEqual(result.totalSum, 40);
+    });
+  });
+
+  describe('Exception Handling & Branch Recovery Path Tests', () => {
+    it('executes success path without exceptions and verifies finally block completion', () => {
+      const result = DataFlowPathService.executeExceptionHandlingPath({ value: 50 });
+      assert.strictEqual(result.executionStatus, 'SUCCESS');
+      assert.strictEqual(result.resultValue, 100);
+      assert.strictEqual(result.caughtErrorMessage, null);
+      assert.strictEqual(result.finalCleanupExecuted, true);
+    });
+
+    it('executes caught exception and recovery fallback path when input is invalid', () => {
+      const result = DataFlowPathService.executeExceptionHandlingPath(null, { fallbackValue: -999 });
+      assert.strictEqual(result.executionStatus, 'RECOVERED');
+      assert.strictEqual(result.resultValue, -999);
+      assert.ok(result.caughtErrorMessage.includes('numerical value is required'));
+      assert.strictEqual(result.finalCleanupExecuted, true);
+    });
+
+    it('executes caught exception and recovery when value is negative out-of-bounds', () => {
+      const result = DataFlowPathService.executeExceptionHandlingPath({ value: -5 }, { fallbackValue: 0 });
+      assert.strictEqual(result.executionStatus, 'RECOVERED');
+      assert.ok(result.caughtErrorMessage.includes('negative value prohibited'));
+      assert.strictEqual(result.finalCleanupExecuted, true);
+    });
+
+    it('re-throws exception when rethrowFatal is enabled and runs finally', () => {
+      assert.throws(
+        () => {
+          DataFlowPathService.executeExceptionHandlingPath(null, { rethrowFatal: true });
+        },
+        (err) => err instanceof DataFlowProcessingError
+      );
+    });
+  });
+
+  describe('Multi-Function Branch Routing Tests', () => {
+    it('routes through EXPRESS path', () => {
+      const result = DataFlowPathService.routeMultiFunctionPath({ value: 20 }, 'EXPRESS');
+      assert.strictEqual(result.executedPath, 'EXPRESS');
+      assert.strictEqual(result.computedScore, 30);
+    });
+
+    it('routes through DETAILED path (high value bonus)', () => {
+      const result = DataFlowPathService.routeMultiFunctionPath({ value: 60 }, 'DETAILED');
+      assert.strictEqual(result.executedPath, 'DETAILED');
+      assert.strictEqual(result.computedScore, 145); // 60*2 + 25
+    });
+
+    it('routes through DETAILED path (standard bonus)', () => {
+      const result = DataFlowPathService.routeMultiFunctionPath({ value: 10 }, 'DETAILED');
+      assert.strictEqual(result.executedPath, 'DETAILED');
+      assert.strictEqual(result.computedScore, 25); // 10*2 + 5
+    });
+
+    it('routes through RECOVERY path', () => {
+      const result = DataFlowPathService.routeMultiFunctionPath(null, 'RECOVERY');
+      assert.strictEqual(result.executedPath, 'RECOVERY');
+      assert.strictEqual(result.isFallbackApplied, true);
+    });
+
+    it('routes through DEFAULT path for unrecognised strategy', () => {
+      const result = DataFlowPathService.routeMultiFunctionPath({ value: 33 }, 'UNKNOWN');
+      assert.strictEqual(result.executedPath, 'DEFAULT');
+      assert.strictEqual(result.computedScore, 33);
+    });
+  });
 });
