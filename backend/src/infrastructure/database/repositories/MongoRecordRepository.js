@@ -3,6 +3,7 @@
 const mongoose = require('mongoose');
 const { RecordModel } = require('../mongoose/schemas/Record.schema');
 const RecordEntity = require('../../../domain/entities/Record.entity');
+const SanitizationAdapter = require('../../security/SanitizationAdapter');
 
 class MongoRecordRepository {
   constructor(model = RecordModel) {
@@ -72,7 +73,11 @@ class MongoRecordRepository {
 
   async findByTitleOrDescription(text) {
     if (mongoose.connection.readyState === 1) {
-      const regex = new RegExp(text, 'i');
+      // Untrusted input flows through SanitizationAdapter before reaching the
+      // RegExp sink, closing the regex-injection / ReDoS path a raw
+      // `new RegExp(text)` would otherwise open up to user-supplied queries.
+      const safeText = SanitizationAdapter.escapeRegex(text);
+      const regex = new RegExp(safeText, 'i');
       const docs = await this.model.find({
         $or: [{ title: regex }, { description: regex }],
       }).lean();

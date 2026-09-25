@@ -32,6 +32,20 @@ describe('Unified Backend Search Tests', () => {
     assert.strictEqual(res.body[0].title, 'Elasticsearch Indexing Item');
   });
 
+  it('GET /api/search treats regex metacharacters in the query as literal text (regex-injection safe)', async () => {
+    await request(app).post('/api/records').send({
+      title: 'Price is $5 (special)',
+      description: 'Contains regex metacharacters: ( ) $ .',
+    });
+
+    // A raw `new RegExp(q)` would either throw on unbalanced input or match
+    // far more broadly than intended; escaping first keeps this a literal match.
+    const res = await request(app).get('/api/search?q=' + encodeURIComponent('$5 (special)'));
+    assert.strictEqual(res.status, 200);
+    assert.ok(Array.isArray(res.body));
+    assert.ok(res.body.some((r) => r.title === 'Price is $5 (special)'));
+  });
+
   it('ElasticsearchAdapter handles null client gracefully', async () => {
     const adapter = new ElasticsearchAdapter({ node: 'http://invalid-es-node:9200' });
     adapter.client = null;
