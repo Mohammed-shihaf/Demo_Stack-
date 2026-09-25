@@ -1,0 +1,16 @@
+node_modules/
+dist/
+.angular/
+*.log
+.env
+.DS_Store
+coverage/
+.nyc_output/
+reports/
+.stryker-tmp/
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+coverage.xml
+.coverage

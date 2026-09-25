@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+package ceplatform;
+
+service RecordService {
+  rpc GetRecord (GetRecordRequest) returns (Record);
+  rpc WatchRecords (WatchRecordsRequest) returns (stream Record);
+}
+
+message GetRecordRequest {
+  string id = 1;
+}
+
+message WatchRecordsRequest {
+  string since = 1;
+}
+
+message Record {
+  string id = 1;
+  string title = 2;
+  string description = 3;
+  string createdAt = 4;
+}
